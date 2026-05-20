@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard';
 import NewTicket from './pages/NewTicket';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
+import Customers from './pages/Customers';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/reports" element={<Reports />} />
           {/* Default fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

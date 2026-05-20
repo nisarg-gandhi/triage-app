@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import tickets
+from .routers import tickets, analytics, customers
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -21,8 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the ticket router
+# Include the routers
 app.include_router(tickets.router)
+app.include_router(analytics.router)
+app.include_router(customers.router)
 
 @app.get("/")
 def read_root():

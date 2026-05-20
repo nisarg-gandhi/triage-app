@@ -4,11 +4,9 @@ import {
   LayoutDashboard, 
   Ticket, 
   Users, 
-  Settings, 
   ChevronLeft, 
   ChevronRight,
-  BarChart3,
-  Inbox
+  BarChart3
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -16,11 +14,9 @@ export default function Sidebar() {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Inbox, label: 'Inbox', badge: '12', path: '/inbox' },
     { icon: Ticket, label: 'Tickets', path: '/tickets' },
     { icon: Users, label: 'Customers', path: '/customers' },
-    { icon: BarChart3, label: 'Reports', path: '/reports' },
-    { icon: Settings, label: 'Settings', path: '/settings' }
+    { icon: BarChart3, label: 'Reports', path: '/reports' }
   ];
 
   return (
@@ -42,6 +38,23 @@ export default function Sidebar() {
           <div className="w-8 h-8 mx-auto rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
             AI
           </div>
+        )}
+        
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`flex items-center justify-center p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors ${isCollapsed ? 'hidden' : 'block'}`}
+          title="Collapse sidebar"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        {isCollapsed && (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 cursor-pointer shadow-sm z-50"
+            title="Expand sidebar"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         )}
       </div>
 
@@ -79,14 +92,6 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="p-4 border-t border-gray-200">
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="flex items-center justify-center w-full p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-        >
-          {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-        </button>
-      </div>
     </aside>
   );
 }
