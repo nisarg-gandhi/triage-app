@@ -1,11 +1,12 @@
 import { AlertCircle, Clock, RefreshCcw } from 'lucide-react';
+import Badge from './Badge';
 
 const StatusBadge = ({ status }) => {
-  const styles = {
-    open: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
-    resolved: 'bg-green-100 text-green-800 border-green-200',
-    closed: 'bg-gray-100 text-gray-800 border-gray-200'
+  const variants = {
+    open: 'yellow',
+    in_progress: 'blue',
+    resolved: 'green',
+    closed: 'gray'
   };
 
   const labels = {
@@ -15,15 +16,10 @@ const StatusBadge = ({ status }) => {
     closed: 'Closed'
   };
 
-  // Fallback for unknown status
-  const currentStyle = styles[status?.toLowerCase()] || styles.open;
-  const currentLabel = labels[status?.toLowerCase()] || status || 'Unknown';
+  const variant = variants[status?.toLowerCase()] || 'yellow';
+  const label = labels[status?.toLowerCase()] || status || 'Unknown';
 
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${currentStyle}`}>
-      {currentLabel}
-    </span>
-  );
+  return <Badge label={label} variant={variant} />;
 };
 
 export default function TicketTable({ tickets, isLoading, error }) {
@@ -67,6 +63,9 @@ export default function TicketTable({ tickets, isLoading, error }) {
               <th className="px-6 py-4 font-semibold">Customer</th>
               <th className="px-6 py-4 font-semibold">Subject</th>
               <th className="px-6 py-4 font-semibold">Status</th>
+              <th className="px-6 py-4 font-semibold">Category</th>
+              <th className="px-6 py-4 font-semibold">Urgency</th>
+              <th className="px-6 py-4 font-semibold">Sentiment</th>
               <th className="px-6 py-4 font-semibold">Created At</th>
             </tr>
           </thead>
@@ -86,6 +85,29 @@ export default function TicketTable({ tickets, isLoading, error }) {
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge status={ticket.status} />
+                </td>
+                <td className="px-6 py-4">
+                  <Badge label={ticket.category} variant="indigo" />
+                </td>
+                <td className="px-6 py-4">
+                  <Badge 
+                    label={ticket.urgency} 
+                    variant={
+                      ticket.urgency?.toLowerCase() === 'critical' ? 'red' :
+                      ticket.urgency?.toLowerCase() === 'high' ? 'orange' : 
+                      ticket.urgency?.toLowerCase() === 'medium' ? 'yellow' : 
+                      ticket.urgency?.toLowerCase() === 'low' ? 'green' : 'gray'
+                    } 
+                  />
+                </td>
+                <td className="px-6 py-4">
+                  <Badge 
+                    label={ticket.sentiment} 
+                    variant={
+                      ticket.sentiment?.toLowerCase() === 'positive' ? 'green' : 
+                      ticket.sentiment?.toLowerCase() === 'negative' ? 'red' : 'gray'
+                    } 
+                  />
                 </td>
                 <td className="px-6 py-4 text-gray-500">
                   {new Date(ticket.created_at).toLocaleDateString(undefined, {

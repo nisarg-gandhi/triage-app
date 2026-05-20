@@ -9,7 +9,7 @@ frontend/.vite
 backend/venv
 backend/__pycache__
 backend/*.pyc
-
+backend/tickets.db
 # =========================
 # Environment Variables
 # =========================
