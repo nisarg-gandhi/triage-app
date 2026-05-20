@@ -118,3 +118,76 @@ Ticket Message: "{message}"
             "urgency": "Medium",
             "sentiment": "Neutral"
         }
+
+def generate_draft_response(
+    customer_name: str,
+    subject: str,
+    message: str,
+    category: str,
+    urgency: str,
+    sentiment: str
+) -> str:
+    """
+    Calls the Groq API to generate a professional support reply draft.
+    Takes into account the customer's name, issue, and ticket metadata.
+    """
+    
+    # Robust Fallback Handling: Return a generic acknowledgment if client isn't available
+    fallback_response = f"Hi {customer_name},\n\nWe have received your request and our support team will get back to you shortly.\n\nBest,\nSupport Team"
+    
+    if not client:
+        return fallback_response
+
+    # Prompt Engineering Strategy:
+    # 1. System Role: We define a clear persona (modern SaaS customer support agent) to set a professional yet approachable tone.
+    # 2. Context Provision: We supply the subject, message, and metadata (category, urgency, sentiment) to ground the response.
+    # 3. Tone constraints: Instruct the model to avoid excessive apologies, keep it concise (under 120 words), and maintain a modern Intercom/Zendesk style.
+    # 4. Hallucination constraints: We explicitly forbid hallucinating solutions or making promises about resolution times to avoid setting wrong expectations.
+    # 5. Output: Return ONLY the raw draft text.
+    
+    prompt = f"""
+You are an expert customer support agent for a modern SaaS company writing a draft response for a customer's support ticket.
+
+Guidelines:
+- Address the customer by name: {customer_name}.
+- Keep the response strictly under 120 words.
+- Use a modern SaaS support tone (e.g., Intercom, Zendesk): professional, concise, empathetic, but NOT overly formal or robotic.
+- Avoid excessive emotional language or repetitive apologies. One brief apology for the inconvenience is sufficient.
+- Acknowledge their specific issue based on the context (Category: {category}, Urgency: {urgency}, Sentiment: {sentiment}).
+- DO NOT hallucinate any solutions or troubleshooting steps.
+- DO NOT make any promises about resolution times or outcomes.
+- Sign off with "Best,\nSupport Team".
+
+Ticket Context:
+- Subject: {subject}
+- Message: {message}
+
+Write the draft response now. Return ONLY the exact text of the draft response, with no conversational filler or markdown code blocks.
+"""
+    
+    try:
+        # API Flow:
+        # 1. We construct a chat completion request to the Groq API.
+        # 2. We use 'llama-3.3-70b-versatile' (or another capable model) for excellent instruction following.
+        # 3. We set a low temperature (0.3) because we want a professional, predictable, and conservative response, avoiding overly creative or risky wording.
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a professional customer support agent."
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.3,
+        )
+        
+        draft = chat_completion.choices[0].message.content.strip()
+        return draft
+    except Exception as e:
+        print(f"Error generating draft response with Groq: {e}")
+        # Robust Error Handling: Return a generic response if the LLM call fails
+        return fallback_response

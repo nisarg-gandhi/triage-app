@@ -14,4 +14,5 @@ class Ticket(Base):
     category = Column(String(50), nullable=True)
     urgency = Column(String(50), nullable=True)
     sentiment = Column(String(50), nullable=True)
+    ai_draft_response = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

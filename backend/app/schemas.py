@@ -20,6 +20,7 @@ class Ticket(BaseModel):
     category: Optional[str] = None
     urgency: Optional[str] = None
     sentiment: Optional[str] = None
+    ai_draft_response: Optional[str] = None
     created_at: datetime
 
     class Config:
