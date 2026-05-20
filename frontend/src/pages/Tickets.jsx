@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Download } from 'lucide-react';
 import ticketService from '../services/ticketService';
 import TicketTable from '../components/TicketTable';
@@ -10,19 +10,21 @@ export default function Tickets() {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    category: '',
-    urgency: ''
-  });
+  
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const filters = {
+    search: searchParams.get('search') || '',
+    status: searchParams.get('status') || '',
+    category: searchParams.get('category') || '',
+    urgency: searchParams.get('urgency') || ''
+  };
 
   useEffect(() => {
     const fetchTickets = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        // Fetch tickets from the backend with filters
         const data = await ticketService.getTickets(filters);
         setTickets(data);
       } catch (err) {
@@ -33,41 +35,42 @@ export default function Tickets() {
     };
 
     fetchTickets();
-  }, [filters]);
+  }, [filters.search, filters.status, filters.category, filters.urgency]);
+
+  const updateSearchParams = useCallback((newFilters) => {
+    setSearchParams(prev => {
+      const updated = new URLSearchParams(prev);
+      let changed = false;
+      
+      Object.entries(newFilters).forEach(([key, value]) => {
+        if (value) {
+          if (updated.get(key) !== value) {
+            updated.set(key, value);
+            changed = true;
+          }
+        } else {
+          if (updated.has(key)) {
+            updated.delete(key);
+            changed = true;
+          }
+        }
+      });
+      
+      return changed ? updated : prev;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   const handleSearch = useCallback((searchTerm) => {
-    setFilters(prev => {
-      if (prev.search === searchTerm) return prev;
-      return { ...prev, search: searchTerm };
-    });
-  }, []);
+    updateSearchParams({ search: searchTerm });
+  }, [updateSearchParams]);
 
   const handleFilterChange = useCallback((newFilters) => {
-    setFilters(prev => {
-      // Prevent object reference change if values are identical
-      if (
-        prev.status === newFilters.status &&
-        prev.category === newFilters.category &&
-        prev.urgency === newFilters.urgency &&
-        prev.search === newFilters.search
-      ) {
-        return prev;
-      }
-      return newFilters;
-    });
-  }, []);
+    updateSearchParams(newFilters);
+  }, [updateSearchParams]);
 
   const handleClearFilters = useCallback(() => {
-    setFilters(prev => {
-      if (!prev.status && !prev.category && !prev.urgency) return prev;
-      return {
-        ...prev,
-        status: '',
-        category: '',
-        urgency: ''
-      };
-    });
-  }, []);
+    updateSearchParams({ status: '', category: '', urgency: '' });
+  }, [updateSearchParams]);
 
   const handleExport = async () => {
     try {

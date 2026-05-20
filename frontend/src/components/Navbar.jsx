@@ -11,6 +11,7 @@ export default function Navbar() {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/tickets?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
     }
   };
 

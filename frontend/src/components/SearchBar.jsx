@@ -4,13 +4,22 @@ import { Search } from 'lucide-react';
 export default function SearchBar({ onSearch, disabled, initialValue = '' }) {
   const [searchTerm, setSearchTerm] = useState(initialValue);
 
+  // Sync internal state if initialValue changes (e.g. from URL)
+  useEffect(() => {
+    setSearchTerm(initialValue);
+  }, [initialValue]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSearch(searchTerm);
+      // Only call onSearch if the searchTerm is actually different from initialValue 
+      // to avoid infinite update loops
+      if (searchTerm !== initialValue) {
+        onSearch(searchTerm);
+      }
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchTerm, onSearch]);
+  }, [searchTerm, initialValue, onSearch]);
 
   return (
     <div className="relative flex-1 max-w-md">
