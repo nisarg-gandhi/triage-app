@@ -4,8 +4,8 @@ import Badge from './Badge';
 
 const StatusBadge = ({ status }) => {
   const variants = {
-    open: 'yellow',
-    in_progress: 'blue',
+    open: 'blue',
+    in_progress: 'yellow',
     resolved: 'green',
     closed: 'gray'
   };
@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
     closed: 'Closed'
   };
 
-  const variant = variants[status?.toLowerCase()] || 'yellow';
+  const variant = variants[status?.toLowerCase()] || 'gray';
   const label = labels[status?.toLowerCase()] || status || 'Unknown';
 
   return <Badge label={label} variant={variant} />;

@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ticketService from '../services/ticketService';
 import TicketTable from '../components/TicketTable';
+import SearchBar from '../components/SearchBar';
+import TicketFilters from '../components/TicketFilters';
 
 export default function Tickets() {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    category: '',
+    urgency: ''
+  });
 
   useEffect(() => {
     const fetchTickets = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        // Fetch tickets from the backend
-        const data = await ticketService.getTickets();
+        // Fetch tickets from the backend with filters
+        const data = await ticketService.getTickets(filters);
         setTickets(data);
       } catch (err) {
         setError(err.message);
@@ -25,7 +33,24 @@ export default function Tickets() {
     };
 
     fetchTickets();
-  }, []);
+  }, [filters]);
+
+  const handleSearch = (searchTerm) => {
+    setFilters(prev => ({ ...prev, search: searchTerm }));
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setFilters(prev => ({
+      ...prev,
+      status: '',
+      category: '',
+      urgency: ''
+    }));
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -44,26 +69,19 @@ export default function Tickets() {
         </Link>
       </div>
 
-      {/* Toolbar / Filters (UI Only) */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search tickets..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm"
-            disabled={isLoading || error}
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            disabled={isLoading || error}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Filter className="w-4 h-4 text-gray-500" />
-            Filters
-          </button>
-        </div>
+      {/* Toolbar / Filters */}
+      <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-start lg:items-center">
+        <SearchBar 
+          onSearch={handleSearch} 
+          disabled={isLoading && tickets.length === 0} 
+          initialValue={filters.search}
+        />
+        <TicketFilters 
+          filters={filters} 
+          onFilterChange={handleFilterChange}
+          disabled={isLoading && tickets.length === 0}
+          onClear={handleClearFilters}
+        />
       </div>
 
       {/* Main Table Content */}

@@ -5,6 +5,7 @@ import ticketService from '../services/ticketService';
 import TicketMetadata from '../components/TicketMetadata';
 import DraftResponseBox from '../components/DraftResponseBox';
 import Badge from '../components/Badge';
+import StatusActions from '../components/StatusActions';
 
 export default function TicketDetail() {
   const { id } = useParams();
@@ -12,6 +13,8 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(null); // stores the status being updated to, or null
+  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     const fetchTicket = async () => {
@@ -32,17 +35,30 @@ export default function TicketDetail() {
 
   const getStatusVariant = (status) => {
     switch (status?.toLowerCase()) {
-      case 'open': return 'yellow';
-      case 'in_progress': return 'blue';
+      case 'open': return 'blue';
+      case 'in_progress': return 'yellow';
       case 'resolved': return 'green';
       case 'closed': return 'gray';
-      default: return 'yellow';
+      default: return 'gray';
     }
   };
 
-  const handleMarkResolved = () => {
-    // We haven't implemented update yet, but this could be a placeholder or simple alert for now
-    alert('Marking as resolved requires update API endpoint. (Coming soon!)');
+  const handleUpdateStatus = async (newStatus) => {
+    if (!ticket || ticket.status.toLowerCase() === newStatus) return;
+    
+    setIsUpdatingStatus(newStatus);
+    try {
+      const updatedTicket = await ticketService.updateTicketStatus(ticket.id, newStatus);
+      setTicket(updatedTicket);
+      
+      // Show success toast
+      setToastMessage(`Ticket marked as ${newStatus.replace('_', ' ')}`);
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      alert(`Failed to update status: ${err.message}`);
+    } finally {
+      setIsUpdatingStatus(null);
+    }
   };
 
   if (isLoading) {
@@ -72,8 +88,18 @@ export default function TicketDetail() {
 
   if (!ticket) return null;
 
+  const isResolved = ticket?.status?.toLowerCase() === 'resolved';
+
   return (
-    <div className="max-w-5xl mx-auto pb-10">
+    <div className="max-w-5xl mx-auto pb-10 relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 transition-opacity duration-300 z-50">
+          <CheckCircle className="w-5 h-5 text-green-400" />
+          <span className="font-medium capitalize">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header Actions */}
       <div className="mb-6 flex items-center justify-between">
         <button 
@@ -82,15 +108,11 @@ export default function TicketDetail() {
         >
           <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Tickets
         </button>
-        <div className="flex space-x-3">
-          <button 
-            onClick={handleMarkResolved}
-            className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-            Mark Resolved
-          </button>
-        </div>
+        <StatusActions 
+          currentStatus={ticket.status} 
+          isUpdating={isUpdatingStatus} 
+          onUpdateStatus={handleUpdateStatus} 
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

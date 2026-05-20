@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional
 
@@ -8,6 +8,19 @@ class TicketCreate(BaseModel):
     customer_email: EmailStr # Validates email format
     subject: str
     message: str
+
+# Schema for updating a ticket's status
+class TicketUpdateStatus(BaseModel):
+    status: str
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        allowed = {'open', 'in_progress', 'resolved'}
+        if v.lower() not in allowed:
+            raise ValueError(f'Status must be one of {allowed}')
+        return v.lower()
+
 
 # Schema for returning a ticket (what we send back to the client)
 class Ticket(BaseModel):

@@ -57,12 +57,51 @@ const ticketService = {
   },
 
   /**
+   * Update ticket status
+   * @param {number|string} id - Ticket ID
+   * @param {string} status - New status
+   * @returns {Promise<Object>} The updated ticket
+   */
+  async updateTicketStatus(id, status) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tickets/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update ticket status');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating ticket ${id} status:`, error);
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        throw new Error('Unable to connect to server. Please ensure the backend is running.');
+      }
+      throw error;
+    }
+  },
+
+  /**
    * Fetch all tickets
+   * @param {Object} filters - Optional filters { search, status, category, urgency }
    * @returns {Promise<Array>} List of tickets
    */
-  async getTickets() {
+  async getTickets(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/tickets/`);
+      const queryParams = new URLSearchParams();
+      
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.urgency) queryParams.append('urgency', filters.urgency);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/tickets/${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch tickets');
       }
