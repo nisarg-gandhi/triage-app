@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from .database import Base
 
@@ -6,6 +7,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     customer_name = Column(String(100), index=True)
     customer_email = Column(String(100), index=True)
     subject = Column(String(200))
@@ -17,6 +19,8 @@ class Ticket(Base):
     ai_draft_response = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    user = relationship("User", back_populates="tickets")
+
 class User(Base):
     __tablename__ = "users"
 
@@ -25,3 +29,5 @@ class User(Base):
     email = Column(String(100), unique=True, index=True)
     hashed_password = Column(String(200))
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    tickets = relationship("Ticket", back_populates="user")

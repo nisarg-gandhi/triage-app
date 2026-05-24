@@ -1,14 +1,19 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# SQLite database URL. 
-# "sqlite:///./tickets.db" will create a file named 'tickets.db' in the backend root.
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tickets.db"
+import os
+from dotenv import load_dotenv
 
-# connect_args={"check_same_thread": False} is required for SQLite in FastAPI.
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+load_dotenv()
+
+# PostgreSQL database URL from environment variable.
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if not SQLALCHEMY_DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is missing. A valid PostgreSQL connection string is required.")
+
+# Create the engine, omitting SQLite specific connect_args
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # SessionLocal class will be a database session factory.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

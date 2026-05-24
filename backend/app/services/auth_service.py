@@ -2,11 +2,20 @@ from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 import jwt
 import os
+from dotenv import load_dotenv
 
-# In a real application, SECRET_KEY should be read from environment variables
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-super-secret-key-for-jwt-keep-it-safe")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+load_dotenv()
+
+# SECRET_KEY must be read from environment variables for production security
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is missing. A secret key is required for secure authentication.")
+
+ALGORITHM = os.environ.get("ALGORITHM", "HS256")
+# default is 60 minutes
+expire_minutes_str = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(expire_minutes_str)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

@@ -8,11 +8,9 @@ load_dotenv()
 
 # Initialize the Groq client
 # The Groq client automatically looks for the GROQ_API_KEY environment variable.
-try:
-    client = Groq()
-except Exception as e:
-    print(f"Warning: Failed to initialize Groq client (is GROQ_API_KEY set?): {e}")
-    client = None
+if not os.environ.get("GROQ_API_KEY"):
+    raise RuntimeError("GROQ_API_KEY environment variable is missing. Required for AI features.")
+client = Groq()
 
 def classify_ticket(subject: str, message: str) -> dict:
     """

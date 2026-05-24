@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, cast, Date
 from typing import Optional
 from . import models, schemas, ai_service
 
 # Function to get all tickets, with optional skip and limit for pagination
 def get_tickets(
     db: Session, 
+    user_id: int,
     skip: int = 0, 
     limit: int = 100,
     search: Optional[str] = None,
@@ -13,7 +14,7 @@ def get_tickets(
     category: Optional[str] = None,
     urgency: Optional[str] = None
 ):
-    query = db.query(models.Ticket)
+    query = db.query(models.Ticket).filter(models.Ticket.user_id == user_id)
     
     if search:
         search_term = f"%{search}%"
@@ -37,12 +38,12 @@ def get_tickets(
     return query.order_by(models.Ticket.id.desc()).offset(skip).limit(limit).all()
 
 # Function to get a single ticket by ID
-def get_ticket(db: Session, ticket_id: int):
-    return db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+def get_ticket(db: Session, ticket_id: int, user_id: int):
+    return db.query(models.Ticket).filter(models.Ticket.id == ticket_id, models.Ticket.user_id == user_id).first()
 
 # Function to update a ticket's status
-def update_ticket_status(db: Session, ticket_id: int, status: str):
-    db_ticket = get_ticket(db, ticket_id)
+def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int):
+    db_ticket = get_ticket(db, ticket_id, user_id)
     if db_ticket:
         db_ticket.status = status
         db.commit()
@@ -50,7 +51,7 @@ def update_ticket_status(db: Session, ticket_id: int, status: str):
     return db_ticket
 
 # Function to create a new ticket
-def create_ticket(db: Session, ticket: schemas.TicketCreate):
+def create_ticket(db: Session, ticket: schemas.TicketCreate, user_id: int):
     # Step 1: Call the AI service to classify the ticket based on subject and message
     classification = ai_service.classify_ticket(subject=ticket.subject, message=ticket.message)
     
@@ -66,6 +67,7 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate):
     
     # Step 3: Create the ticket object with the AI metadata
     db_ticket = models.Ticket(
+        user_id=user_id,
         customer_name=ticket.customer_name,
         customer_email=ticket.customer_email,
         subject=ticket.subject,
@@ -82,14 +84,16 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate):
     return db_ticket
 
 # Analytics functions
-def get_analytics_overview(db: Session):
-    total_tickets = db.query(func.count(models.Ticket.id)).scalar()
-    open_tickets = db.query(func.count(models.Ticket.id)).filter(models.Ticket.status == "open").scalar()
-    in_progress_tickets = db.query(func.count(models.Ticket.id)).filter(models.Ticket.status == "in_progress").scalar()
-    resolved_tickets = db.query(func.count(models.Ticket.id)).filter(models.Ticket.status == "resolved").scalar()
-    high_urgency_tickets = db.query(func.count(models.Ticket.id)).filter(models.Ticket.urgency == "high").scalar()
+def get_analytics_overview(db: Session, user_id: int):
+    base_query = db.query(models.Ticket).filter(models.Ticket.user_id == user_id)
     
-    # Calculate a mock resolution rate (resolved / total)
+    total_tickets = base_query.count()
+    open_tickets = base_query.filter(models.Ticket.status == "open").count()
+    in_progress_tickets = base_query.filter(models.Ticket.status == "in_progress").count()
+    resolved_tickets = base_query.filter(models.Ticket.status == "resolved").count()
+    high_urgency_tickets = base_query.filter(models.Ticket.urgency == "high").count()
+    
+    # Calculate a resolution rate (resolved / total)
     resolution_rate = round((resolved_tickets / total_tickets * 100) if total_tickets > 0 else 0)
     
     return {
@@ -101,25 +105,42 @@ def get_analytics_overview(db: Session):
         "resolution_rate": resolution_rate
     }
 
-def get_analytics_charts(db: Session):
-    # Mocking tickets created over time (e.g. past 7 days) since we don't have a created_at timestamp in the model yet.
-    # We will just return some dummy trend data. If we had created_at, we would group by date.
-    volume_trend = [
-        {"name": "Mon", "tickets": 12},
-        {"name": "Tue", "tickets": 19},
-        {"name": "Wed", "tickets": 15},
-        {"name": "Thu", "tickets": 22},
-        {"name": "Fri", "tickets": 28},
-        {"name": "Sat", "tickets": 10},
-        {"name": "Sun", "tickets": 5},
-    ]
+def get_analytics_charts(db: Session, user_id: int):
+    # Real tickets created over time, grouped by date
+    date_group = cast(models.Ticket.created_at, Date)
+    daily_volume = db.query(
+        date_group.label("date"),
+        func.count(models.Ticket.id)
+    ).filter(
+        models.Ticket.user_id == user_id
+    ).group_by(
+        date_group
+    ).order_by(
+        date_group
+    ).limit(30).all()
+    
+    volume_trend = [{"name": str(date), "tickets": count} for date, count in daily_volume]
     
     # Category distribution
-    categories = db.query(models.Ticket.category, func.count(models.Ticket.id)).group_by(models.Ticket.category).all()
+    categories = db.query(
+        models.Ticket.category, 
+        func.count(models.Ticket.id)
+    ).filter(
+        models.Ticket.user_id == user_id
+    ).group_by(
+        models.Ticket.category
+    ).all()
     category_distribution = [{"name": cat or "Uncategorized", "value": count} for cat, count in categories]
     
     # Status distribution
-    statuses = db.query(models.Ticket.status, func.count(models.Ticket.id)).group_by(models.Ticket.status).all()
+    statuses = db.query(
+        models.Ticket.status, 
+        func.count(models.Ticket.id)
+    ).filter(
+        models.Ticket.user_id == user_id
+    ).group_by(
+        models.Ticket.status
+    ).all()
     status_distribution = [{"name": stat, "value": count} for stat, count in statuses]
 
     return {
@@ -128,13 +149,15 @@ def get_analytics_charts(db: Session):
         "status_distribution": status_distribution
     }
 
-def get_aggregated_customers(db: Session):
+def get_aggregated_customers(db: Session, user_id: int):
     # Group by customer_name and email, calculate ticket count and get max ticket ID for latest info
     results = db.query(
         models.Ticket.customer_name,
         models.Ticket.customer_email,
         func.count(models.Ticket.id).label("ticket_count"),
         func.max(models.Ticket.id).label("latest_ticket_id")
+    ).filter(
+        models.Ticket.user_id == user_id
     ).group_by(
         models.Ticket.customer_name,
         models.Ticket.customer_email
@@ -144,15 +167,16 @@ def get_aggregated_customers(db: Session):
     customers = []
     for r in results:
         # Fetch the latest ticket for this customer
-        latest_ticket = get_ticket(db, r.latest_ticket_id)
+        latest_ticket = get_ticket(db, r.latest_ticket_id, user_id)
         status = latest_ticket.status if latest_ticket else "unknown"
+        last_active = latest_ticket.created_at.strftime("%Y-%m-%d %H:%M") if latest_ticket else "Unknown"
         
         customers.append({
             "name": r.customer_name or "Unknown",
             "email": r.customer_email or "",
             "tickets": r.ticket_count,
             "status": status,
-            "lastActive": "Recently" # Mocked since we don't have created_at
+            "lastActive": last_active
         })
         
     # Sort by ticket count descending

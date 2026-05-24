@@ -5,8 +5,9 @@ from typing import List, Optional
 import csv
 import io
 
-from .. import schemas, crud
+from .. import schemas, crud, models
 from ..database import get_db
+from ..dependencies import get_current_user
 
 router = APIRouter(
     prefix="/tickets",
@@ -14,11 +15,11 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=schemas.Ticket)
-def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db)):
+def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Create a new ticket.
     """
-    return crud.create_ticket(db=db, ticket=ticket)
+    return crud.create_ticket(db=db, ticket=ticket, user_id=current_user.id)
 
 @router.get("/", response_model=List[schemas.Ticket])
 def read_tickets(
@@ -28,13 +29,15 @@ def read_tickets(
     status: Optional[str] = None,
     category: Optional[str] = None,
     urgency: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Retrieve all tickets with optional pagination and filtering.
     """
     tickets = crud.get_tickets(
         db, 
+        user_id=current_user.id,
         skip=skip, 
         limit=limit,
         search=search,
@@ -50,13 +53,15 @@ def export_tickets(
     status: Optional[str] = None,
     category: Optional[str] = None,
     urgency: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Export tickets to a CSV file based on current filters.
     """
     tickets = crud.get_tickets(
         db, 
+        user_id=current_user.id,
         skip=0, 
         limit=10000, # Large limit for export
         search=search,
@@ -93,21 +98,21 @@ def export_tickets(
     )
 
 @router.get("/{ticket_id}", response_model=schemas.Ticket)
-def read_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def read_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Retrieve a specific ticket by ID.
     """
-    db_ticket = crud.get_ticket(db, ticket_id=ticket_id)
+    db_ticket = crud.get_ticket(db, ticket_id=ticket_id, user_id=current_user.id)
     if db_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return db_ticket
 
 @router.patch("/{ticket_id}/status", response_model=schemas.Ticket)
-def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, db: Session = Depends(get_db)):
+def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Update the status of a specific ticket.
     """
-    db_ticket = crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status)
+    db_ticket = crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status, user_id=current_user.id)
     if db_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return db_ticket
