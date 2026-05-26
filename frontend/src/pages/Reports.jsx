@@ -2,13 +2,17 @@ import { BarChart3, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { analyticsService } from '../services/analyticsService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Reports() {
   const [charts, setCharts] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    analyticsService.getCharts().then(setCharts).catch(console.error);
-  }, []);
+    if (user?.role !== 'user') {
+      analyticsService.getCharts().then(setCharts).catch(console.error);
+    }
+  }, [user]);
 
   const handleExport = async () => {
     try {
@@ -27,6 +31,20 @@ export default function Reports() {
       alert('Export failed');
     }
   };
+
+  if (user?.role === 'user') {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center min-h-[300px]">
+          <h2 className="text-xl font-semibold text-red-700 mb-2">403 Forbidden</h2>
+          <p className="text-red-600 mb-4">You don't have permission to view reports.</p>
+          <button onClick={() => window.history.back()} className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors font-medium text-sm">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

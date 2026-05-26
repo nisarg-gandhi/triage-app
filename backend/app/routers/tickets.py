@@ -7,7 +7,7 @@ import io
 
 from .. import schemas, crud, models
 from ..database import get_db
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, require_role
 
 router = APIRouter(
     prefix="/tickets",
@@ -96,6 +96,23 @@ def export_tickets(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=tickets_export.csv"}
     )
+
+@router.get("/needs-review", response_model=List[schemas.Ticket])
+def read_needs_review_tickets(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role("admin", "agent"))
+):
+    """
+    Retrieve all tickets belonging to the current user where needs_review is True and status is "open".
+    """
+    tickets = db.query(models.Ticket).filter(
+        models.Ticket.user_id == current_user.id,
+        models.Ticket.needs_review == True,
+        models.Ticket.status == "open"
+    ).order_by(models.Ticket.id.desc()).offset(skip).limit(limit).all()
+    return tickets
 
 @router.get("/{ticket_id}", response_model=schemas.Ticket)
 def read_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

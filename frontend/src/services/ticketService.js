@@ -115,6 +115,26 @@ const ticketService = {
       }
       throw error;
     }
+  },
+
+  /**
+   * Fetch tickets that need review
+   * @returns {Promise<Array>} List of tickets needing review
+   */
+  async getNeedsReviewTickets() {
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/tickets/needs-review`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch tickets needing review');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching needs review tickets:', error);
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        throw new Error('Unable to connect to server. Please ensure the backend is running.');
+      }
+      throw error;
+    }
   }
 };
 

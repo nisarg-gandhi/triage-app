@@ -33,6 +33,9 @@ class Ticket(BaseModel):
     category: Optional[str] = None
     urgency: Optional[str] = None
     sentiment: Optional[str] = None
+    confidence: Optional[float] = None
+    routing_reasoning: Optional[str] = None
+    needs_review: Optional[bool] = None
     ai_draft_response: Optional[str] = None
     created_at: datetime
 
@@ -44,6 +47,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role: Optional[str] = "user"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -53,6 +57,7 @@ class User(BaseModel):
     id: int
     name: str
     email: EmailStr
+    role: str
     created_at: datetime
 
     class Config:

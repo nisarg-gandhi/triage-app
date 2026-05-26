@@ -8,15 +8,17 @@ import {
   ChevronRight,
   BarChart3
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user } = useAuth();
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Ticket, label: 'Tickets', path: '/tickets' },
-    { icon: Users, label: 'Customers', path: '/customers' },
-    { icon: BarChart3, label: 'Reports', path: '/reports' }
+    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: Users, label: 'Customers', path: '/customers' }] : []),
+    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: BarChart3, label: 'Reports', path: '/reports' }] : [])
   ];
 
   return (
@@ -102,6 +104,25 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
             );
           })}
         </nav>
+      </div>
+
+      {/* Footer with Role Badge */}
+      <div className="border-t border-slate-200 p-4">
+        {(!isCollapsed || mobileMenuOpen) && (
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-slate-900 truncate">{user?.name || 'User'}</span>
+              <span className="text-xs text-slate-500 capitalize">{user?.role || 'user'}</span>
+            </div>
+            <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full ${
+              user?.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+              user?.role === 'agent' ? 'bg-indigo-100 text-indigo-700' :
+              'bg-slate-100 text-slate-700'
+            }`}>
+              {user?.role || 'user'}
+            </span>
+          </div>
+        )}
       </div>
 
     </aside>

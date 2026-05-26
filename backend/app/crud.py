@@ -65,6 +65,8 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate, user_id: int):
         sentiment=classification.get("sentiment")
     )
     
+    confidence = classification.get("confidence", 0.0)
+    
     # Step 3: Create the ticket object with the AI metadata
     db_ticket = models.Ticket(
         user_id=user_id,
@@ -76,6 +78,9 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate, user_id: int):
         category=classification.get("category"),
         urgency=classification.get("urgency"),
         sentiment=classification.get("sentiment"),
+        confidence=confidence,
+        routing_reasoning=classification.get("reasoning"),
+        needs_review=(confidence < 0.70),
         ai_draft_response=draft_response
     )
     db.add(db_ticket)

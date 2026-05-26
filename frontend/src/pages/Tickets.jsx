@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, AlertCircle } from 'lucide-react';
 import ticketService from '../services/ticketService';
 import TicketTable from '../components/TicketTable';
 import SearchBar from '../components/SearchBar';
 import TicketFilters from '../components/TicketFilters';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Tickets() {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,12 +22,19 @@ export default function Tickets() {
     urgency: searchParams.get('urgency') || ''
   };
 
+  const activeTab = searchParams.get('tab') || 'all';
+
   useEffect(() => {
     const fetchTickets = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await ticketService.getTickets(filters);
+        let data;
+        if (activeTab === 'needs_review') {
+          data = await ticketService.getNeedsReviewTickets();
+        } else {
+          data = await ticketService.getTickets(filters);
+        }
         setTickets(data);
       } catch (err) {
         setError(err.message);
@@ -35,7 +44,7 @@ export default function Tickets() {
     };
 
     fetchTickets();
-  }, [filters.search, filters.status, filters.category, filters.urgency]);
+  }, [filters.search, filters.status, filters.category, filters.urgency, activeTab]);
 
   const updateSearchParams = useCallback((newFilters) => {
     setSearchParams(prev => {
@@ -126,6 +135,25 @@ export default function Tickets() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex space-x-4 border-b border-gray-200">
+        <button
+          onClick={() => updateSearchParams({ tab: 'all' })}
+          className={`py-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'all' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+        >
+          All Tickets
+        </button>
+        {(user?.role === 'admin' || user?.role === 'agent') && (
+          <button
+            onClick={() => updateSearchParams({ tab: 'needs_review' })}
+            className={`py-2 px-1 text-sm font-medium border-b-2 flex items-center gap-1.5 transition-colors ${activeTab === 'needs_review' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          >
+            <AlertCircle className="w-4 h-4" />
+            Needs Review
+          </button>
+        )}
+      </div>
+
       {/* Toolbar / Filters */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-start lg:items-center">
         <SearchBar 
@@ -136,7 +164,7 @@ export default function Tickets() {
         <TicketFilters 
           filters={filters} 
           onFilterChange={handleFilterChange}
-          disabled={isLoading && tickets.length === 0}
+          disabled={(isLoading && tickets.length === 0) || activeTab === 'needs_review'}
           onClear={handleClearFilters}
         />
       </div>

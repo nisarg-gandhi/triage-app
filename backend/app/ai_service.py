@@ -21,7 +21,9 @@ def classify_ticket(subject: str, message: str) -> dict:
         return {
             "category": "General Inquiry",
             "urgency": "Medium",
-            "sentiment": "Neutral"
+            "sentiment": "Neutral",
+            "confidence": 0.0,
+            "reasoning": "Groq client not initialized."
         }
 
     # Prompt Engineering Strategy:
@@ -53,22 +55,36 @@ Sentiment:
 - Neutral
 - Negative
 
+IMPORTANT: Be honest about uncertainty. If the ticket is vague, ambiguous, or could belong to multiple categories, confidence MUST reflect that uncertainty and should be below 0.70. Do not default to high confidence scores. Reserve scores above 0.85 only for tickets with very clear, specific, unambiguous issues.
+
 EXAMPLES:
 Subject: "I want my money back for the last charge"
 Message: "You charged me twice and I demand a return of the funds immediately!"
-Output: {{"category": "Refund Request", "urgency": "High", "sentiment": "Negative"}}
+Output: {{"category": "Refund Request", "urgency": "High", "sentiment": "Negative", "confidence": 0.95, "reasoning": "The user explicitly demands a return of funds for a double charge."}}
 
 Subject: "Invoice for last month"
 Message: "Where can I find the invoice for my subscription last month?"
-Output: {{"category": "Billing", "urgency": "Low", "sentiment": "Neutral"}}
+Output: {{"category": "Billing", "urgency": "Low", "sentiment": "Neutral", "confidence": 0.90, "reasoning": "The user is simply asking where to find a past invoice."}}
 
 Subject: "App crashes on login"
 Message: "Every time I tap the login button, the app completely freezes and then crashes."
-Output: {{"category": "Bug Report", "urgency": "Critical", "sentiment": "Negative"}}
+Output: {{"category": "Bug Report", "urgency": "Critical", "sentiment": "Negative", "confidence": 0.98, "reasoning": "The user reports a consistent app crash that prevents login."}}
 
 Subject: "Dark mode"
 Message: "It would be really great if you could add a dark mode to the dashboard."
-Output: {{"category": "Feature Request", "urgency": "Low", "sentiment": "Positive"}}
+Output: {{"category": "Feature Request", "urgency": "Low", "sentiment": "Positive", "confidence": 0.92, "reasoning": "The user suggests adding a dark mode feature."}}
+
+Subject: "I'm not happy with the service"
+Message: "Things haven't been great lately and I wanted to reach out."
+Output: {{"category": "General Inquiry", "urgency": "Low", "sentiment": "Negative", "confidence": 0.52, "reasoning": "Message is too vague to determine a specific category with certainty."}}
+
+Subject: "Question about my account"
+Message: "Hi, I have a question."
+Output: {{"category": "Account Access", "urgency": "Low", "sentiment": "Neutral", "confidence": 0.45, "reasoning": "No specific issue described; category is a best guess based on limited context."}}
+
+Subject: "It's not working"
+Message: "The thing I use every day stopped working. Please help."
+Output: {{"category": "Technical Support", "urgency": "Medium", "sentiment": "Negative", "confidence": 0.61, "reasoning": "Vague description with no specifics about which feature or error is occurring."}}
 
 Now, please classify the following ticket. Ensure any language requesting money back or a return of funds is mapped to "Refund Request". Return ONLY a valid JSON object with the exact same structure as the examples.
 
@@ -95,7 +111,7 @@ Ticket Message: "{message}"
             ],
             model="llama-3.3-70b-versatile", 
             response_format={"type": "json_object"},
-            temperature=0.0,
+            temperature=0.2,
         )
         
         # Parse the JSON string returned by the LLM into a Python dictionary
@@ -106,7 +122,9 @@ Ticket Message: "{message}"
         return {
             "category": result.get("category", "General Inquiry"),
             "urgency": result.get("urgency", "Medium"),
-            "sentiment": result.get("sentiment", "Neutral")
+            "sentiment": result.get("sentiment", "Neutral"),
+            "confidence": result.get("confidence", 0.0),
+            "reasoning": result.get("reasoning", "No reasoning provided.")
         }
     except Exception as e:
         print(f"Error classifying ticket with Groq: {e}")
@@ -114,7 +132,9 @@ Ticket Message: "{message}"
         return {
             "category": "General Inquiry",
             "urgency": "Medium",
-            "sentiment": "Neutral"
+            "sentiment": "Neutral",
+            "confidence": 0.0,
+            "reasoning": f"Error: {e}"
         }
 
 def generate_draft_response(

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Bell, LogOut, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export default function Navbar({ setMobileMenuOpen }) {
   const navigate = useNavigate();
@@ -9,6 +10,57 @@ export default function Navbar({ setMobileMenuOpen }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetchWithAuth('/tickets/');
+        if (!response.ok) return;
+        const tickets = await response.json();
+        
+        const newNotifs = [];
+        tickets.forEach(ticket => {
+          if (ticket.status === 'open') {
+            if (ticket.needs_review) {
+              newNotifs.push({
+                id: `review-${ticket.id}`,
+                title: `Ticket needs review: ${ticket.subject}`,
+                time: new Date(ticket.created_at),
+                unread: true
+              });
+            }
+            if (ticket.urgency === 'Critical') {
+              newNotifs.push({
+                id: `critical-${ticket.id}`,
+                title: `Critical ticket: ${ticket.subject}`,
+                time: new Date(ticket.created_at),
+                unread: true
+              });
+            }
+          }
+        });
+        
+        newNotifs.sort((a, b) => b.time - a.time);
+        
+        const formatRelativeTime = (date) => {
+          const now = new Date();
+          const diffInSeconds = Math.floor((now - date) / 1000);
+          if (diffInSeconds < 60) return 'just now';
+          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+          return `${Math.floor(diffInSeconds / 86400)} days ago`;
+        };
+
+        setNotifications(
+          newNotifs.slice(0, 5).map(n => ({ ...n, time: formatRelativeTime(n.time) }))
+        );
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -18,11 +70,11 @@ export default function Navbar({ setMobileMenuOpen }) {
     }
   };
 
-  const mockNotifications = [
-    { id: 1, title: 'New ticket created', time: '2 minutes ago', unread: true },
-    { id: 2, title: 'Ticket classified as high urgency', time: '1 hour ago', unread: true },
-    { id: 3, title: 'Ticket #1023 resolved', time: '3 hours ago', unread: false },
-  ];
+  const handleMarkAllRead = () => {
+    setShowNotifications(false);
+    setNotifications([]);
+  };
+
   return (
     <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
       <div className="flex items-center flex-1 max-w-2xl gap-3">
@@ -53,26 +105,39 @@ export default function Navbar({ setMobileMenuOpen }) {
             className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-100 focus:outline-none"
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            {notifications.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            )}
           </button>
           
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] z-50 py-2">
               <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                <span className="text-xs text-indigo-600 cursor-pointer hover:underline">Mark all as read</span>
+                {notifications.length > 0 && (
+                  <span onClick={handleMarkAllRead} className="text-xs text-indigo-600 cursor-pointer hover:underline">Mark all as read</span>
+                )}
               </div>
               <div className="max-h-96 overflow-y-auto">
-                {mockNotifications.map((notif) => (
-                  <div key={notif.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${notif.unread ? 'bg-indigo-50/30' : ''}`}>
-                    <p className={`text-sm ${notif.unread ? 'font-medium text-slate-900' : 'text-slate-700'}`}>{notif.title}</p>
-                    <p className="text-xs text-slate-500 mt-1">{notif.time}</p>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center flex flex-col items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">You're all caught up</p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map((notif) => (
+                    <div key={notif.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${notif.unread ? 'bg-indigo-50/30' : ''}`}>
+                      <p className={`text-sm ${notif.unread ? 'font-medium text-slate-900' : 'text-slate-700'}`}>{notif.title}</p>
+                      <p className="text-xs text-slate-500 mt-1">{notif.time}</p>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="px-4 py-2 border-t border-slate-100 text-center">
-                <span className="text-xs text-indigo-600 font-medium cursor-pointer hover:underline">View all</span>
-              </div>
+              {notifications.length > 0 && (
+                <div className="px-4 py-2 border-t border-slate-100 text-center">
+                  <span className="text-xs text-indigo-600 font-medium cursor-pointer hover:underline">View all</span>
+                </div>
+              )}
             </div>
           )}
         </div>

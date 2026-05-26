@@ -13,12 +13,17 @@ router = APIRouter(
 
 @router.post("/register", response_model=schemas.User)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    if user.role == "admin":
+        raise HTTPException(status_code=403, detail="Cannot self-register as admin")
+    if user.role not in ["user", "agent"]:
+        user.role = "user"
+
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = auth_service.get_password_hash(user.password)
-    db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password)
+    db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role=user.role)
     
     db.add(db_user)
     db.commit()

@@ -4,14 +4,20 @@ import { Ticket, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [overview, setOverview] = useState(null);
   const [charts, setCharts] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user?.role === 'user') {
+      setLoading(false);
+      return;
+    }
     const fetchAnalytics = async () => {
       try {
         const [overviewData, chartsData] = await Promise.all([
@@ -27,7 +33,7 @@ export default function Dashboard() {
       }
     };
     fetchAnalytics();
-  }, []);
+  }, [user]);
 
   const stats = overview ? [
     { title: 'Total Tickets', value: overview.total_tickets.toString(), trend: 'up', trendValue: '12', icon: Ticket },
@@ -46,12 +52,14 @@ export default function Dashboard() {
           <p className="text-slate-500 text-sm mt-1">Track your AI support agent's performance</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={() => navigate('/reports')}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:shadow-sm active:scale-95 transition-all duration-200 text-sm font-medium shadow-sm"
-          >
-            Export Report
-          </button>
+          {user?.role !== 'user' && (
+            <button 
+              onClick={() => navigate('/reports')}
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:shadow-sm active:scale-95 transition-all duration-200 text-sm font-medium shadow-sm"
+            >
+              Export Report
+            </button>
+          )}
           <button 
             onClick={() => navigate('/tickets/new')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 hover:shadow-sm active:scale-95 transition-all duration-200 text-sm font-medium shadow-sm"
@@ -61,7 +69,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {loading ? (
+      {user?.role === 'user' ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Welcome, {user?.name || 'User'}</h2>
+          <p className="text-slate-600 mb-4">Submit a ticket below or view your existing tickets.</p>
+          <button 
+            onClick={() => navigate('/tickets')}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+          >
+            View Tickets
+          </button>
+        </div>
+      ) : loading ? (
         <div className="animate-pulse space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map(i => (

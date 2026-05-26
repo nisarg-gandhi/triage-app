@@ -80,10 +80,17 @@ export default function TicketTable({ tickets, isLoading, error }) {
                 className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
               >
                 <td className="px-6 py-4">
-                  <div className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors text-sm">
-                    {ticket.customer_name}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <div className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors text-sm">
+                        {ticket.customer_name}
+                      </div>
+                      <div className="text-slate-500 text-xs mt-0.5">{ticket.customer_email}</div>
+                    </div>
+                    {ticket.needs_review && (
+                      <AlertCircle className="w-4 h-4 text-amber-500 ml-1 flex-shrink-0" title="Needs Review" />
+                    )}
                   </div>
-                  <div className="text-slate-500 text-xs mt-0.5">{ticket.customer_email}</div>
                 </td>
                 <td className="px-6 py-4 text-slate-700 text-sm">
                   <div className="truncate max-w-xs font-medium" title={ticket.subject}>
