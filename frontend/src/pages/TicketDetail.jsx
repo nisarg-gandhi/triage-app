@@ -77,7 +77,7 @@ export default function TicketDetail() {
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to load ticket</h2>
         <p className="text-red-500 mb-6">{error}</p>
         <Link 
-          to="/tickets"
+          to="/admin/tickets"
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Tickets
@@ -103,7 +103,7 @@ export default function TicketDetail() {
       {/* Header Actions */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button 
-          onClick={() => navigate('/tickets')}
+          onClick={() => navigate('/admin/tickets')}
           className="flex items-center text-sm text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Tickets

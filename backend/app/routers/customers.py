@@ -14,4 +14,4 @@ def get_customers(db: Session = Depends(get_db), current_user: models.User = Dep
     """
     Get aggregated customer data based on existing tickets.
     """
-    return crud.get_aggregated_customers(db, user_id=current_user.id)
+    return crud.get_aggregated_customers(db, user_id=current_user.id, role=current_user.role)

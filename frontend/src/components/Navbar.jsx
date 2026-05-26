@@ -65,7 +65,7 @@ export default function Navbar({ setMobileMenuOpen }) {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/tickets?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/admin/tickets?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
     }
   };

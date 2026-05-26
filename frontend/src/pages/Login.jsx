@@ -18,11 +18,15 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const userData = await login(email, password);
+      // Redirect based on role
+      if (userData.role === 'admin' || userData.role === 'agent') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/user/dashboard', { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Failed to login');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -115,7 +119,7 @@ const Login = () => {
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
               Sign up for free
             </Link>
           </p>

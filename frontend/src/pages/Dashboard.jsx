@@ -54,14 +54,14 @@ export default function Dashboard() {
         <div className="flex gap-3">
           {user?.role !== 'user' && (
             <button 
-              onClick={() => navigate('/reports')}
+              onClick={() => navigate('/admin/reports')}
               className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:shadow-sm active:scale-95 transition-all duration-200 text-sm font-medium shadow-sm"
             >
               Export Report
             </button>
           )}
           <button 
-            onClick={() => navigate('/tickets/new')}
+            onClick={() => navigate('/admin/tickets/new')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 hover:shadow-sm active:scale-95 transition-all duration-200 text-sm font-medium shadow-sm"
           >
             New Ticket
@@ -74,7 +74,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-slate-900 mb-2">Welcome, {user?.name || 'User'}</h2>
           <p className="text-slate-600 mb-4">Submit a ticket below or view your existing tickets.</p>
           <button 
-            onClick={() => navigate('/tickets')}
+            onClick={() => navigate('/admin/tickets')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
           >
             View Tickets

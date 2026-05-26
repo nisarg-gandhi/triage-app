@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserPlus, Mail, Lock, User, AlertCircle } from 'lucide-react';
 
-const Signup = () => {
+const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,11 +19,15 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
-      await register(name, email, password);
-      navigate('/dashboard');
+      const userData = await register(name, email, password);
+      // Redirect based on role (new users default to "user" role)
+      if (userData.role === 'admin' || userData.role === 'agent') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/user/dashboard', { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Failed to create account');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -66,7 +70,7 @@ const Signup = () => {
                   type="text"
                   required
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors sm:text-sm shadow-sm"
-                  placeholder="John Doe"
+                  placeholder="Jane Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -148,4 +152,4 @@ const Signup = () => {
   );
 };
 
-export default Signup;
+export default Register;

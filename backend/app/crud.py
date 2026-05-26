@@ -7,6 +7,7 @@ from . import models, schemas, ai_service
 def get_tickets(
     db: Session, 
     user_id: int,
+    role: str = "user",
     skip: int = 0, 
     limit: int = 100,
     search: Optional[str] = None,
@@ -14,7 +15,11 @@ def get_tickets(
     category: Optional[str] = None,
     urgency: Optional[str] = None
 ):
-    query = db.query(models.Ticket).filter(models.Ticket.user_id == user_id)
+    query = db.query(models.Ticket)
+    
+    # Only filter by user_id for regular users; admins and agents see all tickets
+    if role == "user":
+        query = query.filter(models.Ticket.user_id == user_id)
     
     if search:
         search_term = f"%{search}%"
@@ -38,12 +43,18 @@ def get_tickets(
     return query.order_by(models.Ticket.id.desc()).offset(skip).limit(limit).all()
 
 # Function to get a single ticket by ID
-def get_ticket(db: Session, ticket_id: int, user_id: int):
-    return db.query(models.Ticket).filter(models.Ticket.id == ticket_id, models.Ticket.user_id == user_id).first()
+def get_ticket(db: Session, ticket_id: int, user_id: int, role: str = "user"):
+    query = db.query(models.Ticket).filter(models.Ticket.id == ticket_id)
+    
+    # Only filter by user_id for regular users; admins and agents can access any ticket
+    if role == "user":
+        query = query.filter(models.Ticket.user_id == user_id)
+    
+    return query.first()
 
 # Function to update a ticket's status
-def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int):
-    db_ticket = get_ticket(db, ticket_id, user_id)
+def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int, role: str = "user"):
+    db_ticket = get_ticket(db, ticket_id, user_id, role=role)
     if db_ticket:
         db_ticket.status = status
         db.commit()
@@ -89,8 +100,12 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate, user_id: int):
     return db_ticket
 
 # Analytics functions
-def get_analytics_overview(db: Session, user_id: int):
-    base_query = db.query(models.Ticket).filter(models.Ticket.user_id == user_id)
+def get_analytics_overview(db: Session, user_id: int, role: str = "user"):
+    base_query = db.query(models.Ticket)
+    
+    # Only filter by user_id for regular users; admins and agents see all tickets
+    if role == "user":
+        base_query = base_query.filter(models.Ticket.user_id == user_id)
     
     total_tickets = base_query.count()
     open_tickets = base_query.filter(models.Ticket.status == "open").count()
@@ -110,15 +125,20 @@ def get_analytics_overview(db: Session, user_id: int):
         "resolution_rate": resolution_rate
     }
 
-def get_analytics_charts(db: Session, user_id: int):
+def get_analytics_charts(db: Session, user_id: int, role: str = "user"):
     # Real tickets created over time, grouped by date
     date_group = cast(models.Ticket.created_at, Date)
-    daily_volume = db.query(
+    
+    daily_volume_query = db.query(
         date_group.label("date"),
         func.count(models.Ticket.id)
-    ).filter(
-        models.Ticket.user_id == user_id
-    ).group_by(
+    )
+    
+    # Only filter by user_id for regular users; admins and agents see all tickets
+    if role == "user":
+        daily_volume_query = daily_volume_query.filter(models.Ticket.user_id == user_id)
+    
+    daily_volume = daily_volume_query.group_by(
         date_group
     ).order_by(
         date_group
@@ -127,25 +147,23 @@ def get_analytics_charts(db: Session, user_id: int):
     volume_trend = [{"name": str(date), "tickets": count} for date, count in daily_volume]
     
     # Category distribution
-    categories = db.query(
+    categories_query = db.query(
         models.Ticket.category, 
         func.count(models.Ticket.id)
-    ).filter(
-        models.Ticket.user_id == user_id
-    ).group_by(
-        models.Ticket.category
-    ).all()
+    )
+    if role == "user":
+        categories_query = categories_query.filter(models.Ticket.user_id == user_id)
+    categories = categories_query.group_by(models.Ticket.category).all()
     category_distribution = [{"name": cat or "Uncategorized", "value": count} for cat, count in categories]
     
     # Status distribution
-    statuses = db.query(
+    statuses_query = db.query(
         models.Ticket.status, 
         func.count(models.Ticket.id)
-    ).filter(
-        models.Ticket.user_id == user_id
-    ).group_by(
-        models.Ticket.status
-    ).all()
+    )
+    if role == "user":
+        statuses_query = statuses_query.filter(models.Ticket.user_id == user_id)
+    statuses = statuses_query.group_by(models.Ticket.status).all()
     status_distribution = [{"name": stat, "value": count} for stat, count in statuses]
 
     return {
@@ -154,16 +172,20 @@ def get_analytics_charts(db: Session, user_id: int):
         "status_distribution": status_distribution
     }
 
-def get_aggregated_customers(db: Session, user_id: int):
+def get_aggregated_customers(db: Session, user_id: int, role: str = "user"):
     # Group by customer_name and email, calculate ticket count and get max ticket ID for latest info
-    results = db.query(
+    agg_query = db.query(
         models.Ticket.customer_name,
         models.Ticket.customer_email,
         func.count(models.Ticket.id).label("ticket_count"),
         func.max(models.Ticket.id).label("latest_ticket_id")
-    ).filter(
-        models.Ticket.user_id == user_id
-    ).group_by(
+    )
+    
+    # Only filter by user_id for regular users; admins and agents see all tickets
+    if role == "user":
+        agg_query = agg_query.filter(models.Ticket.user_id == user_id)
+    
+    results = agg_query.group_by(
         models.Ticket.customer_name,
         models.Ticket.customer_email
     ).all()
@@ -172,7 +194,7 @@ def get_aggregated_customers(db: Session, user_id: int):
     customers = []
     for r in results:
         # Fetch the latest ticket for this customer
-        latest_ticket = get_ticket(db, r.latest_ticket_id, user_id)
+        latest_ticket = get_ticket(db, r.latest_ticket_id, user_id, role=role)
         status = latest_ticket.status if latest_ticket else "unknown"
         last_active = latest_ticket.created_at.strftime("%Y-%m-%d %H:%M") if latest_ticket else "Unknown"
         

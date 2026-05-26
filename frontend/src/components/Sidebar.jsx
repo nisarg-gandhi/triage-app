@@ -15,10 +15,10 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
   const { user } = useAuth();
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Ticket, label: 'Tickets', path: '/tickets' },
-    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: Users, label: 'Customers', path: '/customers' }] : []),
-    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: BarChart3, label: 'Reports', path: '/reports' }] : [])
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: Ticket, label: 'Tickets', path: '/admin/tickets' },
+    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: Users, label: 'Customers', path: '/admin/customers' }] : []),
+    ...(user?.role === 'admin' || user?.role === 'agent' ? [{ icon: BarChart3, label: 'Reports', path: '/admin/reports' }] : [])
   ];
 
   return (

@@ -26,7 +26,7 @@ export default function Badge({ label, variant = 'gray' }) {
   return (
     <span className="px-2 py-0.5 rounded-md text-xs font-medium border bg-white text-slate-700 border-slate-200 shadow-sm inline-flex items-center max-w-full">
       <span className={`w-1.5 h-1.5 flex-shrink-0 rounded-full mr-1.5 ${dotColor}`}></span>
-      <span className="truncate">{displayLabel}</span>
+      <span className="whitespace-nowrap">{displayLabel}</span>
     </span>
   );
 }

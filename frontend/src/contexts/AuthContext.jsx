@@ -25,16 +25,18 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // Returns the userData so callers can redirect based on role.
   const login = async (email, password) => {
     const { access_token } = await authService.login(email, password);
     localStorage.setItem('token', access_token);
     const userData = await authService.getMe(access_token);
     setUser(userData);
+    return userData;
   };
 
   const register = async (name, email, password) => {
     await authService.register(name, email, password);
-    await login(email, password);
+    return await login(email, password);
   };
 
   const logout = () => {

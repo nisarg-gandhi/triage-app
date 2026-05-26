@@ -38,6 +38,7 @@ def read_tickets(
     tickets = crud.get_tickets(
         db, 
         user_id=current_user.id,
+        role=current_user.role,
         skip=skip, 
         limit=limit,
         search=search,
@@ -62,6 +63,7 @@ def export_tickets(
     tickets = crud.get_tickets(
         db, 
         user_id=current_user.id,
+        role=current_user.role,
         skip=0, 
         limit=10000, # Large limit for export
         search=search,
@@ -119,7 +121,7 @@ def read_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: mod
     """
     Retrieve a specific ticket by ID.
     """
-    db_ticket = crud.get_ticket(db, ticket_id=ticket_id, user_id=current_user.id)
+    db_ticket = crud.get_ticket(db, ticket_id=ticket_id, user_id=current_user.id, role=current_user.role)
     if db_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return db_ticket
@@ -129,7 +131,7 @@ def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStat
     """
     Update the status of a specific ticket.
     """
-    db_ticket = crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status, user_id=current_user.id)
+    db_ticket = crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status, user_id=current_user.id, role=current_user.role)
     if db_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return db_ticket

@@ -76,7 +76,7 @@ export default function TicketTable({ tickets, isLoading, error }) {
             {tickets.map((ticket) => (
               <tr 
                 key={ticket.id} 
-                onClick={() => navigate(`/tickets/${ticket.id}`)}
+              onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
                 className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
               >
                 <td className="px-6 py-4">

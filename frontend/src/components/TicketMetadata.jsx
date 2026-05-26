@@ -32,26 +32,20 @@ export default function TicketMetadata({ ticket }) {
         )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-0">
-          <span className="text-xs text-slate-500 font-medium truncate">Category</span>
-          <div className="truncate">
-            <Badge label={ticket.category} variant="indigo" />
-          </div>
-        </div>
-        
-        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-0">
-          <span className="text-xs text-slate-500 font-medium truncate">Urgency</span>
-          <div className="truncate">
-            <Badge label={ticket.urgency} variant={getUrgencyVariant(ticket.urgency)} />
-          </div>
+      <div className="flex flex-wrap gap-3 mb-4">
+        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-[120px]">
+          <span className="text-xs text-slate-500 font-medium">Category</span>
+          <Badge label={ticket.category} variant="indigo" />
         </div>
 
-        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-0">
-          <span className="text-xs text-slate-500 font-medium truncate">Sentiment</span>
-          <div className="truncate">
-            <Badge label={ticket.sentiment} variant={getSentimentVariant(ticket.sentiment)} />
-          </div>
+        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-[120px]">
+          <span className="text-xs text-slate-500 font-medium">Urgency</span>
+          <Badge label={ticket.urgency} variant={getUrgencyVariant(ticket.urgency)} />
+        </div>
+
+        <div className="flex flex-col space-y-1 p-3 bg-slate-50/50 rounded-lg border border-slate-100 min-w-[120px]">
+          <span className="text-xs text-slate-500 font-medium">Sentiment</span>
+          <Badge label={ticket.sentiment} variant={getSentimentVariant(ticket.sentiment)} />
         </div>
       </div>
       

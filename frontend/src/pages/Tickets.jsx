@@ -126,7 +126,7 @@ export default function Tickets() {
             Export
           </button>
           <Link
-            to="/tickets/new"
+            to="/admin/tickets/new"
             className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 hover:shadow-md active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-indigo-100 shadow-sm"
           >
             <Plus className="w-5 h-5" />

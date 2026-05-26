@@ -14,11 +14,11 @@ def get_analytics_overview(db: Session = Depends(get_db), current_user: models.U
     """
     Get overview statistics for the dashboard.
     """
-    return crud.get_analytics_overview(db, user_id=current_user.id)
+    return crud.get_analytics_overview(db, user_id=current_user.id, role=current_user.role)
 
 @router.get("/charts")
 def get_analytics_charts(db: Session = Depends(get_db), current_user: models.User = Depends(require_role("admin", "agent"))):
     """
     Get data for dashboard charts.
     """
-    return crud.get_analytics_charts(db, user_id=current_user.id)
+    return crud.get_analytics_charts(db, user_id=current_user.id, role=current_user.role)
