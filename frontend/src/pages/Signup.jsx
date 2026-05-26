@@ -48,7 +48,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f14] flex items-center justify-center px-4 py-12 font-sans antialiased">
+    <div className="auth-page min-h-screen bg-[#0d0f14] flex items-center justify-center px-4 py-12 font-sans antialiased">
 
       {/* ── Ambient background glows (same as landing page) ─────────────── */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">

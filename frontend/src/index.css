@@ -32,4 +32,14 @@
     caret-color: #0f172a;
     transition: background-color 9999s ease-in-out 0s;
   }
+
+  /* Autofill style override for dark auth page inputs */
+  .auth-page input:-webkit-autofill,
+  .auth-page input:-webkit-autofill:hover,
+  .auth-page input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #1a1c23 inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff;
+    transition: background-color 9999s ease-in-out 0s;
+  }
 }

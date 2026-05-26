@@ -33,10 +33,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Handle 401 responses emitted by fetchWithAuth.
+  // Note: do NOT reset the sessionExpired flag here — dispatchEvent() is synchronous,
+  // so resetting inside this handler would clear the flag before other concurrent 401
+  // promise resolutions have a chance to check it, causing duplicate toasts.
   const handleSessionExpired = useCallback(() => {
     localStorage.removeItem('token');
     setUser(null);
-    resetSessionExpired(); // Allow future 401s to trigger the event again.
 
     // Show toast notification.
     window.dispatchEvent(
@@ -59,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', access_token);
     const userData = await authService.getMe(access_token);
     setUser(userData);
+    resetSessionExpired(); // Safe to accept 401 events again after a successful login.
     return userData;
   };
 
