@@ -144,7 +144,7 @@ export default function UserTicketDetail() {
     // Open a Server-Sent Events connection for real-time status updates.
     // EventSource cannot send custom headers, so we pass the JWT as a query param.
     const token = localStorage.getItem('token');
-    const apiBase = import.meta.env.VITE_API_URL || '';
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     const sseUrl = `${apiBase}/tickets/${id}/stream?token=${token}`;
     const es = new EventSource(sseUrl);
 

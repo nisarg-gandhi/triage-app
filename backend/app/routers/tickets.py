@@ -12,14 +12,12 @@ from .. import schemas, crud, models
 from ..database import get_db
 from ..dependencies import get_current_user, require_role
 from ..services import auth_service
+from ..state import ticket_subscribers
 
 router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
 )
-
-# Module-level registry: ticket_id -> list of asyncio.Queue instances (one per SSE connection)
-ticket_subscribers: dict[int, list[asyncio.Queue]] = {}
 
 @router.post("/", response_model=schemas.Ticket)
 def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -137,24 +135,13 @@ def read_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: mod
     return db_ticket
 
 @router.patch("/{ticket_id}/status", response_model=schemas.Ticket)
-def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Update the status of a specific ticket and push the updated ticket to all active SSE subscribers.
     """
-    db_ticket = crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status, user_id=current_user.id, role=current_user.role)
+    db_ticket = await crud.update_ticket_status(db, ticket_id=ticket_id, status=status_update.status, user_id=current_user.id, role=current_user.role)
     if db_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
-
-    # Push updated ticket data to all SSE subscribers for this ticket
-    queues = ticket_subscribers.get(ticket_id, [])
-    if queues:
-        ticket_schema = schemas.Ticket.model_validate(db_ticket)
-        payload = ticket_schema.model_dump_json()
-        for q in list(queues):
-            try:
-                q.put_nowait(payload)
-            except asyncio.QueueFull:
-                pass  # Drop if the consumer is too slow
 
     return db_ticket
 

@@ -1,8 +1,10 @@
+import json
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, cast, Date
 from typing import Optional
 from datetime import datetime, timezone
 from . import models, schemas, ai_service
+from .state import ticket_subscribers
 
 # Function to get all tickets, with optional skip and limit for pagination
 def get_tickets(
@@ -54,7 +56,7 @@ def get_ticket(db: Session, ticket_id: int, user_id: int, role: str = "user"):
     return query.first()
 
 # Function to update a ticket's status
-def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int, role: str = "user"):
+async def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int, role: str = "user"):
     db_ticket = get_ticket(db, ticket_id, user_id, role=role)
     if db_ticket:
         db_ticket.status = status
@@ -73,6 +75,19 @@ def update_ticket_status(db: Session, ticket_id: int, status: str, user_id: int,
 
         db.commit()
         db.refresh(db_ticket)
+
+        # Notify all active SSE subscribers for this ticket
+        if ticket_id in ticket_subscribers:
+            ticket_data = json.dumps({
+                "id": db_ticket.id,
+                "status": db_ticket.status,
+                "updated_at": db_ticket.updated_at.isoformat() if db_ticket.updated_at else None,
+                "resolved_at": db_ticket.resolved_at.isoformat() if db_ticket.resolved_at else None,
+                "closed_at": db_ticket.closed_at.isoformat() if db_ticket.closed_at else None,
+            })
+            for queue in list(ticket_subscribers[ticket_id]):
+                await queue.put(ticket_data)
+
     return db_ticket
 
 # Function to create a new ticket
