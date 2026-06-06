@@ -3,9 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Clock, User, Mail, AlertCircle, RefreshCcw,
   CheckCircle, Sparkles, UserCheck, ChevronDown, UserPlus,
+  ThumbsUp, ThumbsDown, Send,
 } from 'lucide-react';
 import ticketService from '../services/ticketService';
 import agentService from '../services/agentService';
+import feedbackService from '../services/feedbackService';
 import TicketMetadata from '../components/TicketMetadata';
 import DraftResponseBox from '../components/DraftResponseBox';
 import Badge from '../components/Badge';
@@ -192,6 +194,170 @@ function AssignedAgentPanel({ ticket, onAssigned }) {
           {ticket.assigned_agent_id ? 'Reassign' : 'Assign Agent'}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Classification Feedback Card (agent only) ─────────────────────────────────
+
+const CATEGORIES = ['billing', 'technical', 'general', 'account', 'shipping', 'refund', 'other'];
+const URGENCIES = ['low', 'medium', 'high', 'critical'];
+
+function ClassificationFeedbackCard({ ticketId }) {
+  const [hasFeedback, setHasFeedback] = useState(null); // null = loading
+  const [isCorrect, setIsCorrect] = useState(null);     // true | false | null
+  const [correctCategory, setCorrectCategory] = useState('');
+  const [correctUrgency, setCorrectUrgency] = useState('');
+  const [feedbackNote, setFeedbackNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Check on mount whether feedback was already submitted
+  useEffect(() => {
+    feedbackService.getTicketFeedback(ticketId)
+      .then((data) => setHasFeedback(!!data))
+      .catch(() => setHasFeedback(false)); // silently fall back to showing the form
+  }, [ticketId]);
+
+  const handleSubmit = async () => {
+    if (isCorrect === null) return;
+    setIsSubmitting(true);
+    try {
+      await feedbackService.submitFeedback(ticketId, {
+        is_correct: isCorrect,
+        correct_category: isCorrect ? null : (correctCategory || null),
+        correct_urgency: isCorrect ? null : (correctUrgency || null),
+        feedback_note: feedbackNote || null,
+      });
+      setSubmitted(true);
+      setHasFeedback(true);
+    } catch (err) {
+      window.dispatchEvent(new CustomEvent('toast:show', {
+        detail: { message: `Feedback error: ${err.message}`, type: 'error' },
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Loading state
+  if (hasFeedback === null) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6">
+        <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4 mb-3" />
+        <div className="h-8 bg-slate-100 rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  // Already submitted — or just submitted
+  if (hasFeedback || submitted) {
+    return (
+      <div className="bg-white rounded-2xl border border-emerald-200/80 p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Thanks for your feedback!</p>
+            <p className="text-xs text-slate-500 mt-0.5">Your input helps improve AI accuracy.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-6 space-y-4">
+      <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
+        Was this classification correct?
+      </h3>
+
+      {/* Correct / Incorrect toggle */}
+      <div className="flex gap-2">
+        <button
+          id="feedback-correct-btn"
+          onClick={() => setIsCorrect(true)}
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+            isCorrect === true
+              ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+              : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600'
+          }`}
+        >
+          <ThumbsUp className="w-4 h-4" /> Correct
+        </button>
+        <button
+          id="feedback-incorrect-btn"
+          onClick={() => setIsCorrect(false)}
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+            isCorrect === false
+              ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/20'
+              : 'bg-white border-slate-200 text-slate-600 hover:border-rose-300 hover:text-rose-600'
+          }`}
+        >
+          <ThumbsDown className="w-4 h-4" /> Incorrect
+        </button>
+      </div>
+
+      {/* Correction fields — only when "Incorrect" is selected */}
+      {isCorrect === false && (
+        <div className="space-y-3 pt-1 border-t border-slate-100">
+          <p className="text-xs font-medium text-slate-500">Help us improve (optional)</p>
+
+          {/* Correct category */}
+          <div className="relative">
+            <select
+              id="feedback-category-select"
+              value={correctCategory}
+              onChange={(e) => setCorrectCategory(e.target.value)}
+              className="w-full appearance-none pl-3 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all"
+            >
+              <option value="">What should the category be?</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Correct urgency */}
+          <div className="relative">
+            <select
+              id="feedback-urgency-select"
+              value={correctUrgency}
+              onChange={(e) => setCorrectUrgency(e.target.value)}
+              className="w-full appearance-none pl-3 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all"
+            >
+              <option value="">What should the urgency be?</option>
+              {URGENCIES.map((u) => (
+                <option key={u} value={u}>{u.charAt(0).toUpperCase() + u.slice(1)}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Optional note */}
+          <textarea
+            id="feedback-note-textarea"
+            value={feedbackNote}
+            onChange={(e) => setFeedbackNote(e.target.value)}
+            placeholder="Any additional notes? (optional)"
+            rows={2}
+            className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all resize-none"
+          />
+        </div>
+      )}
+
+      {/* Submit */}
+      <button
+        id="feedback-submit-btn"
+        onClick={handleSubmit}
+        disabled={isCorrect === null || isSubmitting}
+        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+      >
+        {isSubmitting ? <RefreshCcw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+        Submit Feedback
+      </button>
     </div>
   );
 }
@@ -415,6 +581,11 @@ export default function TicketDetail() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* AI Classification Feedback — agent only, only when ticket is assigned to this agent */}
+          {role === 'agent' && ticket.assigned_agent_id === user?.id && (
+            <ClassificationFeedbackCard ticketId={ticket.id} />
           )}
 
           {/* Ticket Info */}

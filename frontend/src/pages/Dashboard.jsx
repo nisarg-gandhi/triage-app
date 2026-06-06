@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
-import { Ticket, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
+import { Ticket, CheckCircle2, AlertCircle, TrendingUp, Brain, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
+import feedbackService from '../services/feedbackService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [overview, setOverview] = useState(null);
   const [charts, setCharts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accuracyMetrics, setAccuracyMetrics] = useState(null);
 
   useEffect(() => {
     if (user?.role === 'user') {
@@ -31,6 +33,13 @@ export default function Dashboard() {
         console.error('Error loading analytics:', error);
       } finally {
         setLoading(false);
+      }
+
+      // Fetch accuracy metrics only for admins (non-blocking — don't let it delay the main load)
+      if (user?.role === 'admin') {
+        feedbackService.getAccuracyMetrics()
+          .then(setAccuracyMetrics)
+          .catch((err) => console.error('Error loading accuracy metrics:', err));
       }
     };
 
@@ -174,6 +183,109 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* AI Accuracy Metrics — admin only, hidden until feedback exists */}
+          {user?.role === 'admin' && accuracyMetrics && accuracyMetrics.total_feedback > 0 && (
+            <div className="space-y-6">
+              {/* Accuracy stat cards row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* AI Accuracy card */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                        <Brain className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700">AI Accuracy</span>
+                    </div>
+                    <span
+                      className={`text-2xl font-bold ${
+                        accuracyMetrics.accuracy_rate >= 80
+                          ? 'text-emerald-600'
+                          : accuracyMetrics.accuracy_rate >= 60
+                          ? 'text-amber-500'
+                          : 'text-rose-500'
+                      }`}
+                    >
+                      {accuracyMetrics.accuracy_rate.toFixed(1)}%
+                    </span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        accuracyMetrics.accuracy_rate >= 80
+                          ? 'bg-emerald-500'
+                          : accuracyMetrics.accuracy_rate >= 60
+                          ? 'bg-amber-400'
+                          : 'bg-rose-500'
+                      }`}
+                      style={{ width: `${Math.min(accuracyMetrics.accuracy_rate, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {accuracyMetrics.correct_count} correct · {accuracyMetrics.incorrect_count} incorrect
+                  </p>
+                </div>
+
+                {/* Feedback Received card */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
+                      <MessageSquare className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700">Feedback Received</span>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-900">{accuracyMetrics.total_feedback}</p>
+                  <p className="text-xs text-slate-400 mt-1">Agent classifications reviewed</p>
+                </div>
+              </div>
+
+              {/* Per-category accuracy table */}
+              {accuracyMetrics.by_category.length > 0 && (
+                <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h2 className="text-base font-semibold text-slate-900 tracking-tight">Accuracy by Category</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Agent feedback broken down per ticket category</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+                          <th className="text-left px-6 py-3 font-semibold">Category</th>
+                          <th className="text-right px-6 py-3 font-semibold">Total Feedback</th>
+                          <th className="text-right px-6 py-3 font-semibold">Correct</th>
+                          <th className="text-right px-6 py-3 font-semibold">Accuracy %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {accuracyMetrics.by_category.map((row, i) => (
+                          <tr key={i} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-3 font-medium text-slate-800 capitalize">{row.category}</td>
+                            <td className="px-6 py-3 text-right text-slate-600">{row.total}</td>
+                            <td className="px-6 py-3 text-right text-slate-600">{row.correct}</td>
+                            <td className="px-6 py-3 text-right">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                  row.accuracy >= 80
+                                    ? 'bg-emerald-50 text-emerald-700'
+                                    : row.accuracy >= 60
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-rose-50 text-rose-700'
+                                }`}
+                              >
+                                {row.accuracy.toFixed(1)}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

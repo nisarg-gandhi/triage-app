@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func, cast, Date, text
+from sqlalchemy import or_, func, cast, Date, text, Integer
 from sqlalchemy.dialects.postgresql import ARRAY, TEXT
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -391,3 +391,107 @@ def get_needs_review_tickets(db: Session, user_id: int, role: str = "user", skip
         query = query.filter(models.Ticket.user_id == user_id)
     
     return query.order_by(models.Ticket.id.desc()).offset(skip).limit(limit).all()
+
+
+# ─── Feedback CRUD ─────────────────────────────────────────────────────────────────
+
+from fastapi import HTTPException
+
+def submit_feedback(
+    db: Session,
+    ticket_id: int,
+    agent_id: int,
+    feedback: schemas.FeedbackCreate,
+) -> models.ClassificationFeedback:
+    """
+    Insert a classification_feedback row.
+    Raises HTTP 400 if this agent already submitted feedback for this ticket.
+    """
+    existing = (
+        db.query(models.ClassificationFeedback)
+        .filter(
+            models.ClassificationFeedback.ticket_id == ticket_id,
+            models.ClassificationFeedback.agent_id == agent_id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Feedback already submitted for this ticket")
+
+    db_feedback = models.ClassificationFeedback(
+        ticket_id=ticket_id,
+        agent_id=agent_id,
+        is_correct=feedback.is_correct,
+        correct_category=feedback.correct_category,
+        correct_urgency=feedback.correct_urgency,
+        feedback_note=feedback.feedback_note,
+    )
+    db.add(db_feedback)
+    db.commit()
+    db.refresh(db_feedback)
+    return db_feedback
+
+
+def get_agent_feedback_for_ticket(
+    db: Session,
+    ticket_id: int,
+    agent_id: int,
+) -> Optional[models.ClassificationFeedback]:
+    """
+    Return the feedback row for this agent+ticket combination, or None.
+    """
+    return (
+        db.query(models.ClassificationFeedback)
+        .filter(
+            models.ClassificationFeedback.ticket_id == ticket_id,
+            models.ClassificationFeedback.agent_id == agent_id,
+        )
+        .first()
+    )
+
+
+def get_accuracy_metrics(db: Session) -> schemas.AccuracyMetrics:
+    """
+    Compute overall AI classification accuracy and a per-category breakdown.
+    Joins classification_feedback with tickets to get the ticket category.
+    """
+    total_feedback = db.query(models.ClassificationFeedback).count()
+    correct_count = (
+        db.query(models.ClassificationFeedback)
+        .filter(models.ClassificationFeedback.is_correct == True)
+        .count()
+    )
+    incorrect_count = total_feedback - correct_count
+    accuracy_rate = round((correct_count / total_feedback * 100) if total_feedback > 0 else 0.0, 2)
+
+    # Per-category breakdown: join feedback → tickets to get ticket.category
+    rows = (
+        db.query(
+            models.Ticket.category.label("category"),
+            func.count(models.ClassificationFeedback.id).label("total"),
+            func.sum(
+                func.cast(models.ClassificationFeedback.is_correct, Integer)
+            ).label("correct"),
+        )
+        .join(models.Ticket, models.ClassificationFeedback.ticket_id == models.Ticket.id)
+        .group_by(models.Ticket.category)
+        .all()
+    )
+
+    by_category = [
+        schemas.CategoryAccuracy(
+            category=row.category or "Uncategorized",
+            total=row.total,
+            correct=int(row.correct or 0),
+            accuracy=round((int(row.correct or 0) / row.total * 100) if row.total > 0 else 0.0, 2),
+        )
+        for row in rows
+    ]
+
+    return schemas.AccuracyMetrics(
+        total_feedback=total_feedback,
+        correct_count=correct_count,
+        incorrect_count=incorrect_count,
+        accuracy_rate=accuracy_rate,
+        by_category=by_category,
+    )

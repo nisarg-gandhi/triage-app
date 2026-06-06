@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -52,3 +52,23 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     tickets = relationship("Ticket", back_populates="user", foreign_keys="Ticket.user_id")
+
+
+class ClassificationFeedback(Base):
+    __tablename__ = "classification_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    agent_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    is_correct = Column(Boolean, nullable=False)
+    correct_category = Column(String(50), nullable=True)
+    correct_urgency = Column(String(50), nullable=True)
+    feedback_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    ticket = relationship("Ticket")
+    agent = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("ticket_id", "agent_id", name="unique_agent_ticket"),
+    )

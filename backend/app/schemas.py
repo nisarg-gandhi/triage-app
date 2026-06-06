@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 
 # ─── Agent schemas ────────────────────────────────────────────────────────────
 
@@ -116,3 +116,38 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+# ─── Feedback schemas ─────────────────────────────────────────────────────────
+
+class FeedbackCreate(BaseModel):
+    ticket_id: int
+    is_correct: bool
+    correct_category: Optional[str] = None
+    correct_urgency: Optional[str] = None
+    feedback_note: Optional[str] = None
+
+class FeedbackOut(BaseModel):
+    id: int
+    ticket_id: int
+    agent_id: int
+    is_correct: bool
+    correct_category: Optional[str] = None
+    correct_urgency: Optional[str] = None
+    feedback_note: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class CategoryAccuracy(BaseModel):
+    category: str
+    total: int
+    correct: int
+    accuracy: float
+
+class AccuracyMetrics(BaseModel):
+    total_feedback: int
+    correct_count: int
+    incorrect_count: int
+    accuracy_rate: float
+    by_category: List[CategoryAccuracy]
