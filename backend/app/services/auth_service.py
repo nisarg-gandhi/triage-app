@@ -6,11 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# SECRET_KEY must be read from environment variables for production security
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
-
-if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY environment variable is missing. A secret key is required for secure authentication.")
+# SECRET_KEY must be set via JWT_SECRET_KEY environment variable — no fallback allowed
+SECRET_KEY = os.environ["JWT_SECRET_KEY"]  # raises KeyError on startup if missing
 
 ALGORITHM = os.environ.get("ALGORITHM", "HS256")
 # default is 60 minutes
