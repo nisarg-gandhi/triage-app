@@ -36,6 +36,23 @@ export const authService = {
     return await response.json();
   },
 
+  googleAuth: async (accessToken) => {
+    const response = await fetchWithAuth('/auth/google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseApiError(errorData) || 'Google sign-in failed');
+    }
+
+    return await response.json(); // { access_token, token_type, user }
+  },
+
   getMe: async (token) => {
     const response = await fetchWithAuth('/auth/me', {
       headers: {
@@ -50,3 +67,4 @@ export const authService = {
     return await response.json();
   }
 };
+

@@ -70,13 +70,27 @@ export const AuthProvider = ({ children }) => {
     return await login(email, password);
   };
 
+  /**
+   * Exchange a Google OAuth2 access token (from useGoogleLogin implicit flow) for an app JWT.
+   * The backend calls Google's userinfo endpoint to verify the token, then finds-or-creates
+   * the user and returns { access_token, token_type, user }. Token storage and state update
+   * mirror the regular login flow exactly.
+   */
+  const loginWithGoogle = async (accessToken) => {
+    const { access_token, user: userData } = await authService.googleAuth(accessToken);
+    localStorage.setItem('token', access_token);
+    setUser(userData);
+    resetSessionExpired();
+    return userData;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -182,6 +182,35 @@ def get_or_create_guest_user(db: Session, name: str, email: str) -> models.User:
     return guest
 
 
+def get_or_create_google_user(db: Session, email: str, name: str) -> models.User:
+    """
+    Look up a user by email. If none exists, create one with role='user' and
+    a securely random, unguessable hashed password — Google users authenticate
+    via ID token, not a password, so the hashed password is intentionally inaccessible.
+
+    If the email already belongs to an existing account (email+password signup),
+    return that account — this merges Google and password auth on the same email.
+    """
+    existing = db.query(models.User).filter(models.User.email == email).first()
+    if existing:
+        return existing
+
+    random_password = secrets.token_urlsafe(32)
+    hashed = auth_service.get_password_hash(random_password)
+
+    new_user = models.User(
+        name=name,
+        email=email,
+        hashed_password=hashed,
+        role="user",
+        categories=[],
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
 def count_recent_public_tickets(db: Session, email: str, window_hours: int = 1) -> int:
     """
     Count tickets submitted from this email address in the last `window_hours` hours.

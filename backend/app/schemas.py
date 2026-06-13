@@ -176,6 +176,16 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class GoogleAuthRequest(BaseModel):
+    """Payload sent from the frontend after useGoogleLogin resolves with an OAuth2 access token."""
+    access_token: str  # The Google OAuth2 access token (from useGoogleLogin implicit flow)
+
+class GoogleToken(BaseModel):
+    """Response shape for /auth/google — extends Token with the resolved user object."""
+    access_token: str
+    token_type: str
+    user: User
+
 class TokenData(BaseModel):
     email: Optional[str] = None
 
