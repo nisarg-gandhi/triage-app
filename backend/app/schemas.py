@@ -31,12 +31,61 @@ class TicketCreate(BaseModel):
     subject: str
     message: str
 
+    @field_validator('subject', 'message')
+    @classmethod
+    def not_blank(cls, v: str, info) -> str:
+        if not v or not v.strip():
+            raise ValueError(f"{info.field_name} cannot be empty")
+        return v.strip()
+
+    @field_validator('subject')
+    @classmethod
+    def subject_length(cls, v: str) -> str:
+        if len(v) < 3 or len(v) > 200:
+            raise ValueError("subject must be between 3 and 200 characters")
+        return v
+
+    @field_validator('message')
+    @classmethod
+    def message_length(cls, v: str) -> str:
+        if len(v) < 10 or len(v) > 5000:
+            raise ValueError("message must be between 10 and 5000 characters")
+        return v
+
 # Schema for public (unauthenticated) ticket submission — includes name/email
 class PublicTicketCreate(BaseModel):
     name: str
     email: EmailStr
     subject: str
     message: str
+
+    @field_validator('name', 'subject', 'message')
+    @classmethod
+    def not_blank(cls, v: str, info) -> str:
+        if not v or not v.strip():
+            raise ValueError(f"{info.field_name} cannot be empty")
+        return v.strip()
+
+    @field_validator('name')
+    @classmethod
+    def name_length(cls, v: str) -> str:
+        if len(v) > 100:
+            raise ValueError("name must be 100 characters or less")
+        return v
+
+    @field_validator('subject')
+    @classmethod
+    def subject_length(cls, v: str) -> str:
+        if len(v) < 3 or len(v) > 200:
+            raise ValueError("subject must be between 3 and 200 characters")
+        return v
+
+    @field_validator('message')
+    @classmethod
+    def message_length(cls, v: str) -> str:
+        if len(v) < 10 or len(v) > 5000:
+            raise ValueError("message must be between 10 and 5000 characters")
+        return v
 
 # Minimal confirmation response for public submissions — no AI fields exposed
 class PublicTicketResponse(BaseModel):

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ticketService from '../services/ticketService';
+import { parseApiError } from '../utils/errorUtils';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ function TriageLogo() {
 
 // ── Styled inputs ─────────────────────────────────────────────────────────────
 
-function StyledInput({ id, type = 'text', value, onChange, placeholder, required, autoComplete }) {
+function StyledInput({ id, type = 'text', value, onChange, placeholder, required, autoComplete, minLength, maxLength }) {
   const [focused, setFocused] = useState(false);
   return (
     <input
@@ -60,6 +61,8 @@ function StyledInput({ id, type = 'text', value, onChange, placeholder, required
       placeholder={placeholder}
       required={required}
       autoComplete={autoComplete}
+      minLength={minLength}
+      maxLength={maxLength}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={{
@@ -81,7 +84,7 @@ function StyledInput({ id, type = 'text', value, onChange, placeholder, required
   );
 }
 
-function StyledTextarea({ id, value, onChange, placeholder, required }) {
+function StyledTextarea({ id, value, onChange, placeholder, required, minLength, maxLength }) {
   const [focused, setFocused] = useState(false);
   return (
     <textarea
@@ -91,6 +94,8 @@ function StyledTextarea({ id, value, onChange, placeholder, required }) {
       placeholder={placeholder}
       required={required}
       rows={5}
+      minLength={minLength}
+      maxLength={maxLength}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={{
@@ -187,13 +192,24 @@ export default function PublicTicketSubmit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Run native HTML5 validation first (handles required, minLength, maxLength, email)
+    if (!e.target.checkValidity()) {
+      e.target.reportValidity();
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
-      const result = await ticketService.submitPublicTicket(form);
-      setSuccess({ ticketId: result.ticket_id, email: form.email });
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+      };
+      const result = await ticketService.submitPublicTicket(payload);
+      setSuccess({ ticketId: result.ticket_id, email: payload.email });
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.');
+      setError(parseApiError(err.data) || err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -263,6 +279,7 @@ export default function PublicTicketSubmit() {
                       placeholder="Your name"
                       required
                       autoComplete="name"
+                      maxLength={100}
                     />
                   </Field>
 
@@ -285,6 +302,8 @@ export default function PublicTicketSubmit() {
                       onChange={set('subject')}
                       placeholder="Brief summary of your issue"
                       required
+                      minLength={3}
+                      maxLength={200}
                     />
                   </Field>
 
@@ -295,7 +314,12 @@ export default function PublicTicketSubmit() {
                       onChange={set('message')}
                       placeholder="Describe your issue in detail…"
                       required
+                      minLength={10}
+                      maxLength={5000}
                     />
+                    <div style={{ textAlign: 'right', fontSize: '12px', color: form.message.length > 4800 ? '#DC2626' : '#9B9490', marginTop: '4px' }}>
+                      {form.message.length}/5000
+                    </div>
                   </Field>
 
                   {/* Error banner */}
