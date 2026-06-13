@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { parseApiError } from '../utils/errorUtils';
 
 
 /**
@@ -22,7 +23,7 @@ const ticketService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to create ticket');
+        throw new Error(parseApiError(errorData) || 'Failed to create ticket');
       }
 
       return await response.json();
@@ -103,7 +104,7 @@ const ticketService = {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to assign agent');
+        throw new Error(parseApiError(errorData) || 'Failed to assign agent');
       }
       return await response.json();
     } catch (error) {
@@ -186,6 +187,32 @@ const ticketService = {
       throw error;
     }
   },
+
+  /**
+   * Submit a public support ticket — no authentication required.
+   * @param {{ name: string, email: string, subject: string, message: string }} payload
+   * @returns {Promise<{ ticket_id: number, status: string, message: string }>}
+   */
+  async submitPublicTicket(payload) {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiBase}/tickets/public`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 429) {
+      throw new Error('Too many submissions. Please try again later.');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseApiError(errorData) || 'Failed to submit ticket. Please try again.');
+    }
+
+    return await response.json();
+  },
 };
 
 export default ticketService;
+

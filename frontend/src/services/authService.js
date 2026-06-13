@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { parseApiError } from '../utils/errorUtils';
 
 export const authService = {
   login: async (email, password) => {
@@ -11,8 +12,8 @@ export const authService = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Login failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseApiError(errorData) || 'Login failed');
     }
 
     return await response.json();
@@ -28,8 +29,8 @@ export const authService = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Registration failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseApiError(errorData) || 'Registration failed');
     }
 
     return await response.json();

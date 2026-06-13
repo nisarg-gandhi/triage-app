@@ -20,12 +20,36 @@ router = APIRouter(
     tags=["tickets"],
 )
 
+@router.post("/public", response_model=schemas.PublicTicketResponse, status_code=201)
+def create_public_ticket(
+    ticket: schemas.PublicTicketCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    Submit a support ticket without authentication.
+    Any visitor can use this endpoint — no Bearer token required.
+
+    Rate limit: max 5 submissions per email address per hour.
+    Returns a minimal confirmation (ticket ID + status) — no AI fields exposed.
+    """
+    # ── Rate limiting: check tickets.customer_email directly (no join needed) ──
+    recent_count = crud.count_recent_public_tickets(db, email=ticket.email)
+    if recent_count >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions. Please try again later.",
+        )
+
+    return crud.create_public_ticket(db=db, ticket_data=ticket)
+
+
 @router.post("/", response_model=schemas.Ticket)
 def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Create a new ticket.
     """
     return crud.create_ticket(db=db, ticket=ticket, user_id=current_user.id, user=current_user)
+
 
 @router.get("/", response_model=List[schemas.Ticket])
 def read_tickets(

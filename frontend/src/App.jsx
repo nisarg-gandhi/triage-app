@@ -13,6 +13,7 @@ import Toast from './components/Toast';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import PublicTicketSubmit from './pages/PublicTicketSubmit';
 
 // Admin / Agent pages (existing, unchanged)
 import Dashboard from './pages/Dashboard';
@@ -86,6 +87,9 @@ function App() {
               </PublicRoute>
             }
           />
+
+          {/* Public ticket submission — no auth guard, accessible by anyone */}
+          <Route path="/submit-ticket" element={<PublicTicketSubmit />} />
 
           {/* ── Customer Portal: /user/* ─────────────────── */}
           <Route

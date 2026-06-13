@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { parseApiError } from '../utils/errorUtils';
 
 /**
  * Service for AI classification feedback endpoints.
@@ -19,7 +20,7 @@ const feedbackService = {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to submit feedback');
+        throw new Error(parseApiError(errorData) || 'Failed to submit feedback');
       }
       return await response.json();
     } catch (error) {

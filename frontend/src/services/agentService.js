@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { parseApiError } from '../utils/errorUtils';
 
 /**
  * Service for agent-related API calls.
@@ -14,7 +15,7 @@ const agentService = {
       const response = await fetchWithAuth('/agents/');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to fetch agents');
+        throw new Error(parseApiError(errorData) || 'Failed to fetch agents');
       }
       return await response.json();
     } catch (error) {

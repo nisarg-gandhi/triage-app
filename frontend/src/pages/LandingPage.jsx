@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 // ── Palette: #F7F3EE bg | #0F0F0F text | #6B6560 muted | #7C3AED accent ──────
@@ -290,6 +290,13 @@ function Nav({ onLogin, onRegister }) {
         {/* Right — desktop */}
         <div className="hidden md:flex items-center gap-2">
           <button
+            id="nav-submit-ticket"
+            onClick={() => navigate('/submit-ticket')}
+            className="px-4 py-1.5 rounded-lg text-sm font-medium text-[#6B6560] hover:text-[#0F0F0F] hover:bg-white hover:border-[#E8E2DA] border border-transparent transition-all cursor-pointer bg-transparent"
+          >
+            Submit a ticket
+          </button>
+          <button
             id="nav-sign-in"
             onClick={onLogin}
             className="px-4 py-1.5 rounded-lg text-sm font-medium text-[#6B6560] hover:text-[#0F0F0F] hover:bg-white hover:border-[#E8E2DA] border border-transparent transition-all cursor-pointer bg-transparent"
@@ -331,6 +338,12 @@ function Nav({ onLogin, onRegister }) {
             </button>
           ))}
           <div className="mt-3 pt-3 border-t border-[#E8E2DA] flex flex-col gap-2">
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/submit-ticket'); }}
+              className="w-full py-2.5 rounded-lg text-sm font-medium text-[#0F0F0F] border border-[#E8E2DA] bg-white transition-colors cursor-pointer"
+            >
+              Submit a ticket
+            </button>
             <button
               onClick={() => { setMenuOpen(false); onLogin(); }}
               className="w-full py-2.5 rounded-lg text-sm font-medium text-[#0F0F0F] border border-[#E8E2DA] bg-white transition-colors cursor-pointer"
@@ -447,6 +460,19 @@ export default function LandingPage() {
                 See how it works
               </button>
             </div>
+
+            {/* Public ticket link — below CTAs */}
+            <p className="text-center text-sm mt-1 mb-10" style={{ color: '#6B6560' }}>
+              Need help?{' '}
+              <Link
+                to="/submit-ticket"
+                style={{ color: '#7C3AED', textDecoration: 'none', fontWeight: 500 }}
+                onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
+                onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+              >
+                Submit a ticket without signing up →
+              </Link>
+            </p>
 
             {/* Hero mockup */}
             <BrowserMockup />

@@ -2,8 +2,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, cast, Date, text, Integer
 from sqlalchemy.dialects.postgresql import ARRAY, TEXT
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import secrets
 from . import models, schemas, ai_service
+from .services import auth_service
 from .state import ticket_subscribers
 
 # Function to get all tickets, with optional skip and limit for pagination
@@ -148,6 +150,79 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate, user_id: int, user:
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
+
+# ─── Public (unauthenticated) ticket helpers ──────────────────────────────────
+
+def get_or_create_guest_user(db: Session, name: str, email: str) -> models.User:
+    """
+    Look up a user by email. If none exists, create one with role='user' and
+    a securely random, unguessable hashed password — they won't log in with it
+    unless they later request a password reset.
+
+    NOTE: If the email belongs to an existing agent or admin, that user is
+    returned as-is. This is an accepted edge-case for demo purposes.
+    """
+    existing = db.query(models.User).filter(models.User.email == email).first()
+    if existing:
+        return existing
+
+    random_password = secrets.token_urlsafe(32)
+    hashed = auth_service.get_password_hash(random_password)
+
+    guest = models.User(
+        name=name,
+        email=email,
+        hashed_password=hashed,
+        role="user",
+        categories=[],
+    )
+    db.add(guest)
+    db.commit()
+    db.refresh(guest)
+    return guest
+
+
+def count_recent_public_tickets(db: Session, email: str, window_hours: int = 1) -> int:
+    """
+    Count tickets submitted from this email address in the last `window_hours` hours.
+    Queries tickets.customer_email directly (denormalized column) — no join needed.
+    Used for basic spam protection on the public endpoint.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+    return (
+        db.query(models.Ticket)
+        .filter(
+            models.Ticket.customer_email == email,
+            models.Ticket.created_at >= cutoff,
+        )
+        .count()
+    )
+
+
+def create_public_ticket(
+    db: Session,
+    ticket_data: schemas.PublicTicketCreate,
+) -> schemas.PublicTicketResponse:
+    """
+    End-to-end handler for unauthenticated ticket submission.
+    Resolves (or creates) a guest user, then delegates to the existing
+    create_ticket() so AI classification + agent suggestion run identically.
+    Returns a minimal PublicTicketResponse — no internal AI fields exposed.
+    """
+    user = get_or_create_guest_user(db, name=ticket_data.name, email=ticket_data.email)
+
+    ticket_create = schemas.TicketCreate(
+        subject=ticket_data.subject,
+        message=ticket_data.message,
+    )
+    db_ticket = create_ticket(db=db, ticket=ticket_create, user_id=user.id, user=user)
+
+    return schemas.PublicTicketResponse(
+        ticket_id=db_ticket.id,
+        status=db_ticket.status,
+        message="Ticket submitted successfully",
+    )
+
 
 # ─── Agent Assignment Functions ────────────────────────────────────────────────
 

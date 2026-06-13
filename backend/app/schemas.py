@@ -31,6 +31,19 @@ class TicketCreate(BaseModel):
     subject: str
     message: str
 
+# Schema for public (unauthenticated) ticket submission — includes name/email
+class PublicTicketCreate(BaseModel):
+    name: str
+    email: EmailStr
+    subject: str
+    message: str
+
+# Minimal confirmation response for public submissions — no AI fields exposed
+class PublicTicketResponse(BaseModel):
+    ticket_id: int
+    status: str
+    message: str
+
 # Schema for updating a ticket's status
 class TicketUpdateStatus(BaseModel):
     status: str
